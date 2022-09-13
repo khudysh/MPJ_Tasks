@@ -1,0 +1,25 @@
+import mpi.MPI;
+import java.util.Arrays;
+
+public class Main {
+
+    public static void main(String[] args) {
+        MPI.Init(args);
+        int me = MPI.COMM_WORLD.Rank();
+        int size = MPI.COMM_WORLD.Size();
+        String[] send = {"0"};
+
+            if (me + 1 != size) {
+                send[0] = String.valueOf(Integer.parseInt(send[0]) + me );
+                MPI.COMM_WORLD.Send(send, 0, send.length, MPI.OBJECT, me + 1, 99);
+            }
+            if (me != 0) {
+                MPI.COMM_WORLD.Recv(send, 0, send.length, MPI.OBJECT, me - 1, 99);
+                System.out.println(me + " recv " + Arrays.toString(send) + " from " + (me - 1));
+        }
+        //System.out.println("Hello world from <"+me+"> of <"+size+">");
+        MPI.Finalize();
+    }
+
+
+}
