@@ -1,0 +1,62 @@
+import mpi.*;
+
+import java.util.Arrays;
+
+public class Main {
+    public static void main(String[] args) {
+        int[] numbers = { 1, 9, 4, 0, 4, -3 };  // сортируемый массив
+
+        MPI.Init(args);
+
+        int rank = MPI.COMM_WORLD.Rank();
+        int size = MPI.COMM_WORLD.Size();
+
+        if (rank == 0) {
+            Request[] requests = new Request[size - 1];
+            int[] finalBuf = new int[numbers.length];
+
+            for (int i = 0; i < 2; i++) {
+                requests[i] = MPI.COMM_WORLD.Irecv(finalBuf, 3 * i, 3, MPI.INT, 7 + i, 2);
+            }
+            Request.Waitall(requests); // Ожидаем получения
+
+            System.out.println("Unsorted massive:");
+            print(numbers);
+
+            System.out.println("Sorted massive:");
+            Arrays.sort(finalBuf);
+            print(finalBuf);
+        } else if (rank > 0 && rank < 7) {
+            int[] rBuf = { numbers[rank-1] };
+
+            int dest = rank < 4 ? 7 : 8;
+
+            MPI.COMM_WORLD.Issend(rBuf, 0, 1, MPI.INT, dest, 1);
+        } else {
+            int[] rBuf = new int[3];
+            Request[] reqs = new Request[rBuf.length];
+            Status[] stats = new Status[reqs.length];
+            int n = rank == 7 ? 0 : 3;
+
+            for (int i = 1 + n; i < 4 + n; i++) {
+                int[] tBuf = new int[1];
+                reqs[(i - 1) % 3] = MPI.COMM_WORLD.Irecv(rBuf, (i - 1) % 3, 1, MPI.INT, i, 1);
+            }
+
+            Request.Waitall(reqs);
+            Arrays.sort(rBuf);
+
+            MPI.COMM_WORLD.Issend(rBuf, 0, 3, MPI.INT, 0, 2);
+        }
+
+        MPI.Finalize();
+    }
+    private static void print(int[] massive) {
+        for (int i = 0; i < massive.length; i++) {
+            System.out.print(massive[i]);
+            if (i < massive.length-1) {
+                System.out.print(", ");
+            } else System.out.println();
+        }
+    }
+}
